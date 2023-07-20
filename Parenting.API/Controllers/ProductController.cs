@@ -1,105 +1,74 @@
-﻿using AutoMapper;
-using Parenting.Server.Dto;
+﻿using Parenting.Server.Dto;
 using Microsoft.AspNetCore.Mvc;
 using Parenting.Server.Models;
 using Parenting.Server.Interfaces;
-using Parenting.Server.Services;
-using Parenting.Server.Repository;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Parenting.Server.Controllers
 {
+
+
     [Route("api/[controller]")]
-    public class ProductController : Controller
+    public class ProductController : ControllerBase
     {
-        private readonly IProductRepository _productRepository;
-        private readonly IMapper _mapper;
+        private readonly IProductService _productService;
+
         private readonly IWebHostEnvironment _environment;
 
-        public ProductController(IProductRepository productRepository, IMapper mapper, IWebHostEnvironment environment)
+
+        public ProductController(IProductService productService, IWebHostEnvironment environment)
         {
-            _productRepository = productRepository;
-            _mapper = mapper;
+            _productService = productService;
             _environment = environment;
         }
 
 
         [HttpGet]
-        public async Task<IActionResult> GetProducts()
+        public Task<List<GetProductDto>> GetProducts()
         {
-            var entities = await _productRepository.GetProducts();
-            var products = _mapper.Map<List<ProductResponceDto>>(entities);
-            return Ok(products);
+            return _productService.GetProducts();
         }
 
 
         [HttpGet("{productId}")]
-        public async Task<IActionResult> GetProduct(int productId)
+        public Task<GetProductDto> GetProduct(int productId)
         {
-            var entities = await _productRepository.GetProduct(productId);
-            var product = _mapper.Map<ProductResponceDto>(entities);
-            return Ok(product);
+            return _productService.GetProduct(productId);
         }
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateProduct([FromForm] ProductDto productcreate)
+        public Task<GetProductDto> CreateProduct([FromForm] AddProductDto productAdd)
         {
-            var productMap = _mapper.Map<Product>(productcreate);
-            var path = Path.Combine(_environment.WebRootPath, "Images/", productcreate.ImagePath.FileName);
-
-            using (FileStream stream = new FileStream(path, FileMode.Create))
-            {
-                await productcreate.ImagePath.CopyToAsync(stream);
-                stream.Close();
-
-                productMap.ImagePath = path;
-                await _productRepository.CreateProduct(productMap);
-                return Ok("Successfully created");
-            }
+            return _productService.CreateProduct(productAdd);
         }
 
-            [HttpPut]
-            public async Task<IActionResult> UpdateProduct(ProductDto updateProduct)
+        [HttpPut]
+        public Task<GetProductDto> UpdateProduct(UpdateProductDto updateProduct)
+        {
+            return _productService.UpdateProduct(updateProduct);
+        }
+
+
+        [HttpDelete("{productId}")]
+        public Task<List<GetProductDto>> DeleteProduct(int productId)
+        {
+            return _productService.DeleteProduct(productId);
+        }
+
+
+        private async Task SaveFile(Stream stream, string fileName)
+        {
+            var fullName = Path.Combine(_environment.WebRootPath, "images", fileName);
+
+            await using FileStream fileStream = new(fullName, FileMode.OpenOrCreate);
+            var buffer = new byte[4096];
+            int bytesRead;
+
+            while ((bytesRead = await stream.ReadAsync(buffer)) > 0)
             {
-                var producToUpdate = await _productRepository.GetProduct(updateProduct.Id);
-
-                if (producToUpdate == null)
-                    return NotFound();
-
-                producToUpdate.Name = updateProduct.Name;
-                producToUpdate.Discription = updateProduct.Discription;
-
-                if (updateProduct.ImagePath == null)
-                    return NotFound();
-
-                var path = Path.Combine(_environment.WebRootPath, "Images/", updateProduct.ImagePath.FileName);
-
-                using (FileStream stream = new FileStream(path, FileMode.Create))
-                {
-                    await updateProduct.ImagePath.CopyToAsync(stream);
-                    stream.Close();
-                }
-                producToUpdate.ImagePath = path;
-
-                await _productRepository.UpdateProduct(producToUpdate);
-                return Ok("Successifully updated");
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
             }
-
-
-            [HttpDelete("{productId}")]
-            public async Task<IActionResult> DeleteProduct(int productId)
-            {
-                var productDelete = await _productRepository.GetProduct(productId);
-
-                if (productDelete == null)
-                    return NotFound();
-
-                await _productRepository.DeleteProduct(productDelete);
-                return (NoContent());
-            }
-
-
-        
+        }
     }
 }

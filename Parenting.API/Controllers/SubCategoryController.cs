@@ -5,74 +5,57 @@ using Parenting.Server.Models;
 using Parenting.Server.Interfaces;
 using Parenting.Server.Services;
 using Parenting.Server.Repository;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Parenting.Server.Controllers
 {
+
+    
     [Route("api/[controller]")]
-    public class SubCategoryController : Controller
+    public class SubCategoryController : ControllerBase
     {
-        private readonly ISubCategoryRepository _subCategoryRepository;
-        private readonly IMapper _mapper;
-        public SubCategoryController(ISubCategoryRepository subCategoryRepository, IMapper mapper)
+
+        private readonly ISubCategoryService _subcategoryService;
+
+        public SubCategoryController(ISubCategoryService subcategoryService)
         {
-            _subCategoryRepository = subCategoryRepository;
-            _mapper = mapper;
+            _subcategoryService = subcategoryService;
         }
 
 
         [HttpGet]
-        public async Task<IActionResult> GetSubCategories()
+        public Task<List<GetSubCategoryDto>> GetSubCategories()
         {
-            var entities = await _subCategoryRepository.GetSubCategories();
-            var subCategories=_mapper.Map<List<SubCategoryDto>>(entities);
-            return Ok(subCategories);
+            return _subcategoryService.GetSubCategories();
         }
 
 
         [HttpGet("{subCategoryId}")]
-        public async Task<IActionResult> GetSubCategories(int subCategoryId)
+        public Task<GetSubCategoryDto> GetSubCategories(int subCategoryId)
         {
-            var entities = await _subCategoryRepository.GetSubCategory(subCategoryId);
-            var subCategories = _mapper.Map<List<SubCategoryDto>>(entities);
-            return Ok(subCategories);
+            return _subcategoryService.GetSubCategory(subCategoryId);
         }
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateSubCategory([FromBody] SubCategoryDto subCategoryCreate)
+        public Task<GetSubCategoryDto> CreateSubCategory([FromBody] AddSubCategoryDto subCategoryCreate)
         {
-            var subCategoryMap = _mapper.Map<SubCategory>(subCategoryCreate);
-            await _subCategoryRepository.CreateSubCategory(subCategoryMap);
-            return Ok("Successfully created");
+            return _subcategoryService.CreateSubCategory(subCategoryCreate);
         }
 
 
         [HttpPut]
-        public async Task<IActionResult> UpdateSubCategory(SubCategoryDto subCategoryUpdate)
+        public Task<GetSubCategoryDto> UpdateSubCategory(UpdateSubCategoryDto subCategoryUpdate)
         {
-            var subCategoryToUpdate = await _subCategoryRepository.GetSubCategory(subCategoryUpdate.Id);
-
-            if (subCategoryToUpdate == null)
-                return NotFound();
-
-            subCategoryToUpdate.Name = subCategoryUpdate.Name;
-            subCategoryToUpdate.CategoryId = subCategoryUpdate.CategoryId;
-            await _subCategoryRepository.UpdateSubCategory(subCategoryToUpdate);
-            return Ok("Successfully Updated");
+            return _subcategoryService.UpdateSubCategory(subCategoryUpdate);
         }
 
 
 
         [HttpDelete("{subCategoryId}")]
-        public async Task<IActionResult> DeleteSubCategory(int subCategoryId)
+        public Task<List<GetSubCategoryDto>> DeleteSubCategory(int subCategoryId)
         {
-            var subCategoryToDelete = await _subCategoryRepository.GetSubCategory(subCategoryId);
-
-            if (subCategoryToDelete == null)
-                return NotFound();
-
-            await _subCategoryRepository.DeleteSubCategory(subCategoryToDelete);
-            return Ok("Successfully Deleted");
+            return _subcategoryService.DeleteSubCategory(subCategoryId);
         }
     }
 }

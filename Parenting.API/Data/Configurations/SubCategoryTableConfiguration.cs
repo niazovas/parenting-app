@@ -16,6 +16,8 @@ namespace Parenting.Server.Data;
          .WithOne(e => e.SubCategory)
          .HasForeignKey(e => e.SubCategoryId)
          .HasPrincipalKey(e => e.Id);
+
+
     }
 	}
 
